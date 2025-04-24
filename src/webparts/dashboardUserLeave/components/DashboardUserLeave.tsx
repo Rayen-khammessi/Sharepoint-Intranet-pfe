@@ -48,6 +48,7 @@ const wrapper = mergeStyles({
 const dialogSurface = mergeStyles({
   boxShadow: "0px 4px 10px rgba(0, 0, 45, 0.1)", // Customize shadow here if needed
   borderRadius: "8px", // Optional: for rounded corners
+  backgroundColor:'white'
 });
 
 const backdrop = mergeStyles({
@@ -109,7 +110,7 @@ export default class DashboardUserLeave extends React.Component<IDashboardUserLe
   private async getListItems(): Promise<void> {
     try {
       const items = await this.sp.web.lists.getByTitle("leaveList").items();
-      const fetchedItem = items[1];
+      const fetchedItem = items[2];
       this.setState({fetcheditem: fetchedItem})
 
     } catch (error) {
@@ -231,7 +232,9 @@ export default class DashboardUserLeave extends React.Component<IDashboardUserLe
                       <div className={backdrop}>
                       <DialogSurface className={dialogSurface}>
                         <DialogBody>
-                          <DialogTitle>Here is the content</DialogTitle>
+                          <DialogTitle style={{}}><strong>Détails</strong></DialogTitle>
+                          <p><strong>Commentaire:</strong>{this.state.fetcheditem.Comment}</p>
+                          <p><strong>Nom du Manager:</strong>{this.state.fetcheditem.IDManage1}</p>
                         </DialogBody>
                       </DialogSurface>
                       </div>

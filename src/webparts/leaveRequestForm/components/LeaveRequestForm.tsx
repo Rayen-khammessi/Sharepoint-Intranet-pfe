@@ -134,7 +134,8 @@ export default class LeaveRequestForm extends React.Component<ILeaveRequestFormP
         substituteID: String(this.state.remplacant),
         Solde: (this.state.MyList as any).SoldConge,
         Etablissement:(this.state.MyList as any).Establishment,
-        UserID: (this.state.MyList as any).UserID
+        UserID: (this.state.MyList as any).UserID,
+        IDManage1: (this.state.MyList as any).Managers
       });
   
       console.log("Item added:", newItem);
