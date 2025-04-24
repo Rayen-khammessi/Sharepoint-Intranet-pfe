@@ -1,0 +1,27 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/config.2.0.schema.json",
+  "version": "2.0",
+  "bundles": {
+    "leave-request-form-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/leaveRequestForm/LeaveRequestFormWebPart.js",
+          "manifest": "./src/webparts/leaveRequestForm/LeaveRequestFormWebPart.manifest.json"
+        }
+      ]
+    },
+    "dashboard-user-leave-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/dashboardUserLeave/DashboardUserLeaveWebPart.js",
+          "manifest": "./src/webparts/dashboardUserLeave/DashboardUserLeaveWebPart.manifest.json"
+        }
+      ]
+    }
+  },
+  "externals": {},
+  "localizedResources": {
+    "LeaveRequestFormWebPartStrings": "lib/webparts/leaveRequestForm/loc/{locale}.js",
+    "DashboardUserLeaveWebPartStrings": "lib/webparts/dashboardUserLeave/loc/{locale}.js"
+  }
+}

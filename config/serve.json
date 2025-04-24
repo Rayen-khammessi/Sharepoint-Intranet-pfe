@@ -1,0 +1,6 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/spfx-serve.schema.json",
+  "port": 4321,
+  "https": true,
+  "initialPage": "https://alightconsulting.sharepoint.com/sites/Alight_internship_Demo_RayenKhamessi/_layouts/workbench.aspx"
+}
