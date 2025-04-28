@@ -1,15 +1,10 @@
 import * as React from 'react';
 import type { IDashboardUserLeaveProps } from './IDashboardUserLeaveProps';
-import { mergeStyles, PrimaryButton } from '@fluentui/react';
-import { Dropdown ,Option, OptionOnSelectData, SelectionEvents } from '@fluentui/react-components';
+import { DatePicker, mergeStyles, PrimaryButton, values } from '@fluentui/react';
+import { buttonClassNames, Dropdown ,Input,Option, OptionOnSelectData, SelectionEvents } from '@fluentui/react-components';
 import {
-  FolderRegular,
-  EditRegular,
-  OpenRegular,
-  DocumentRegular,
-  PeopleRegular,
-  DocumentPdfRegular,
-  VideoRegular,
+  DocumentArrowDown24Regular,
+  EditOff24Regular,
 } from "@fluentui/react-icons";
 import {
   TableBody,
@@ -19,8 +14,6 @@ import {
   TableHeader,
   TableHeaderCell,
   TableCellLayout,
-  PresenceBadgeStatus,
-  Avatar,
 } from "@fluentui/react-components";
 import { spfi, SPFI, SPFx } from '@pnp/sp';
 import "@pnp/sp/webs";
@@ -35,6 +28,16 @@ import {
   DialogTitle,
   Button,
 } from "@fluentui/react-components";
+
+
+
+
+const dateClass = mergeStyles({
+  backgroundColor:'white',
+  maxWidth: "300px",
+  height:"30px",
+});
+
 
 
 
@@ -92,11 +95,16 @@ const confirmButtonClass = mergeStyles({
 export default class DashboardUserLeave extends React.Component<IDashboardUserLeaveProps , {}> {
   public state={
     options:['choix1','choix2','choix3'],
-    options1:['choix1','choix2','choix3'],
-    filtre1:'',
+    options1:['En cours','Acceptée','Rejetée'],
     columns:["Motif d'absence",'Date début','Date fin','Status','Action','Détails'],
     fetcheditem: [] as any,
-    open: false 
+    open: false,
+    statut: '',
+    startDate:'',
+    filteredItems:[] as any,
+    startdate_upd :"",
+    enddate_upd : "",
+    motif_upd:''
   };
 
   private sp: SPFI;
@@ -110,8 +118,10 @@ export default class DashboardUserLeave extends React.Component<IDashboardUserLe
   private async getListItems(): Promise<void> {
     try {
       const items = await this.sp.web.lists.getByTitle("leaveList").items();
-      const fetchedItem = items[2];
-      this.setState({fetcheditem: fetchedItem})
+      const fetchedItem = items.filter(item => item.UserID === '45');
+      console.log(items)
+      console.log(fetchedItem)      
+      this.setState({ fetcheditem: fetchedItem, filteredItems: fetchedItem });
 
     } catch (error) {
       console.error("Error fetching list items: ", error);
@@ -119,13 +129,69 @@ export default class DashboardUserLeave extends React.Component<IDashboardUserLe
   };
 
 
+
+
+  private updateItem = async (item: any) => {
+    console.log(item.ID)
+    const id = item.ID;
+    await this.sp.web.lists.getByTitle("leaveList").items.getById(id).update({
+      AbsenceReason:this.state.motif_upd,
+      StartDate:new Date (this.state.startdate_upd),
+      EndDate:new Date (this.state.enddate_upd)
+    });
+    console.log('set')
+    this.getListItems();
+  };
+
+
+
+  private _deleteItem = async () => {
+    await this.sp.web.lists.getByTitle("leaveList").items.getById(10).delete();
+    this.getListItems();
+  };
+  
+
   handleChange = (event: SelectionEvents, data: OptionOnSelectData) => {
-    this.setState({filtre1:data.optionValue});
+    this.setState({statut:data.optionValue});
   };
 
   setOpen = (value: boolean) => {
     this.setState({ open: value });
   };
+
+  handeldelete=()=>{
+    console.log('clicked')
+    this._deleteItem();
+  };
+
+
+  selectdate=(date)=>{
+    this.setState({startDate:String(date)});
+  };
+
+
+  private filterItems = () => {
+    const { fetcheditem, statut, startDate } = this.state;
+  
+    const filtered = fetcheditem.filter((item) => {
+      const matchesStatut = !statut || item.Status === statut;
+      const matchesDate = !startDate || new Date(item.StartDate) >= new Date(startDate);
+      return matchesStatut && matchesDate;
+    });
+  
+    this.setState({ filteredItems: filtered });
+  };
+
+  handleabsChange = (event: SelectionEvents, data: OptionOnSelectData) => {
+    this.setState({motif_upd:data.optionValue});
+  };
+
+  selectStart=(date)=>{
+    this.setState({startdate_upd:String(date)});
+  }
+  selectEnd=(date)=>{
+    this.setState({enddate_upd:String(date)});
+  }
 
 
 
@@ -133,12 +199,15 @@ export default class DashboardUserLeave extends React.Component<IDashboardUserLe
   public render(): React.ReactElement<IDashboardUserLeaveProps> {
 
     console.log(this.state)
+    console.log(this.state.fetcheditem.Status )
+
+
     return (
       <div>
         <strong>Filtres</strong>
         <div style={{display:'flex',flexDirection:'row',gap:'20px',height:'35px'}}>
           <div style={{display:'flex',flexDirection:'row',gap:'0px'}} >
-            <p>filtre 1</p>
+            <p style={{marginRight:'10px'}} >Statut </p>
             <div style={{height:'15px',marginTop:'11px'}}>
             <Dropdown className={dropdownClass} onOptionSelect={this.handleChange} placeholder="Choisir" >
               {this.state.options1.map((option) => (
@@ -153,24 +222,21 @@ export default class DashboardUserLeave extends React.Component<IDashboardUserLe
 
 
           <div style={{display:'flex',flexDirection:'row',gap:'0px'}} >
-            <p>filtre 2</p>
+            <p style={{marginRight:'10px'}}>Date début </p>
             <div style={{height:'15px',marginTop:'11px'}}>
-            <Dropdown className={dropdownClass} onOptionSelect={this.handleChange} placeholder="Choisir" >
-              {this.state.options.map((option) => (
-                <Option style={{backgroundColor:'white'}} key={option} value={option}>
-                  {option}
-                </Option>
-              ))}
-            </Dropdown>
+            <DatePicker
+              className={dateClass}
+              placeholder="Select a date..."
+              onSelectDate={this.selectdate}
+            />
             </div>
           </div>
 
 
 
 
-          <PrimaryButton className={confirmButtonClass}>REFRAICHIR</PrimaryButton>
+          <PrimaryButton onClick={this.filterItems} className={confirmButtonClass}>REFRAICHIR</PrimaryButton>
           <PrimaryButton className={confirmButtonClass}>CREER UNE DEMANDE</PrimaryButton>
-          <PrimaryButton className={confirmButtonClass} style={{marginLeft:'30px'}}>CHOISIR UN REMPLACANT</PrimaryButton>
         </div>
 
 
@@ -190,37 +256,113 @@ export default class DashboardUserLeave extends React.Component<IDashboardUserLe
             </TableRow>
           </TableHeader>
           <TableBody>
-            {/* {items.map((item) => ( */}
+            {this.state.filteredItems.map((item) => (
               <TableRow>
                 <TableCell>
                   <TableCellLayout>
-                    {this.state.fetcheditem.AbsenceReason}
+                    {item.AbsenceReason}
                   </TableCellLayout>
                 </TableCell>
 
                 <TableCell>
                   <TableCellLayout>
-                  {this.state.fetcheditem.StartDate}
+                  {item.StartDate}
                   </TableCellLayout>
                 </TableCell>
 
                 <TableCell>
                   <TableCellLayout>
-                  {this.state.fetcheditem.EndDate}
+                  {item.EndDate}
                   </TableCellLayout>
                 </TableCell>
 
                 <TableCell>
                   <TableCellLayout>
-                  {this.state.fetcheditem.Status}
+                  {item.Status}
                   </TableCellLayout>
                 </TableCell>
 
+
+
                 <TableCell>
                   <TableCellLayout>
-                  <DeleteRegular/>
+                  <div style={{display:'flex',flexDirection:'row',gap:'12px'}}>
+
+                  <div  style={{display:'flex',cursor:'pointer',}} className={wrapper}>
+                    <Dialog>
+                      <DialogTrigger disableButtonEnhancement>
+                        <EditOff24Regular style={{width:'14px',height:'14px'}} />
+                      </DialogTrigger>
+                      <div className={backdrop}>
+                      <DialogSurface className={dialogSurface}>
+                        {(item.Status==="En cours" )?
+                        <DialogBody>
+                          <DialogTitle><strong>MODIFIER :</strong></DialogTitle>
+                          <div className={dropdownClass}>
+                          <label><strong>Motif d'absence</strong></label>
+                            <Dropdown  onOptionSelect={this.handleabsChange} placeholder="Choisir" >
+                              {this.state.options.map((option) => (
+                                <Option style={{backgroundColor:'white'}} key={option} value={option}>
+                                  {option}
+                                </Option>
+                              ))}
+                            </Dropdown>
+                            <div >
+                            <label><strong>Date de début</strong></label>
+                            <DatePicker
+                              className={dateClass}
+                              placeholder="Select a date..."
+                              onSelectDate={this.selectStart}
+                            />
+                            </div>
+                          <div>
+                            <label><strong>Date fin</strong></label>
+                            <DatePicker
+                              className={dateClass}
+                              placeholder="Select a date..."
+                              onSelectDate={this.selectEnd}
+                            />
+                            </div>
+                            <PrimaryButton onClick={()=>{this.updateItem(item)}} style={{height:'24px',backgroundColor:'#23365E' ,borderRadius:'25px',marginTop:'20px' }}>Confirmer</PrimaryButton>
+                          </div>
+                        </DialogBody>
+                        :
+                        <DialogBody>
+                          <p>you cant</p>
+                        </DialogBody>
+                      }
+                      </DialogSurface>
+                      </div>
+                    </Dialog>
+                  </div>
+
+
+                  <div style={{display:'flex',cursor:'pointer'}} className={wrapper}>
+                    <Dialog>
+                      <DialogTrigger disableButtonEnhancement>
+                        <DeleteRegular/>
+                      </DialogTrigger>
+                      <div className={backdrop}>
+                      <DialogSurface className={dialogSurface}>
+                        <DialogBody>
+                          <DialogTitle><strong>Annulation de demande :</strong></DialogTitle>
+                          <p>Voulez-vous vraiment annuler cette demande</p>
+                          <PrimaryButton onClick={this.handeldelete} style={{height:'24px',backgroundColor:'#23365E' ,borderRadius:'25px',marginTop:'20px' }}>
+                            Annuler la demande
+                          </PrimaryButton>
+                        </DialogBody>
+                      </DialogSurface>
+                      </div>
+                    </Dialog>
+                  </div>
+
+                  </div>
                   </TableCellLayout>
                 </TableCell>
+
+
+
+
 
                 <TableCell>
                   <TableCellLayout>
@@ -233,8 +375,14 @@ export default class DashboardUserLeave extends React.Component<IDashboardUserLe
                       <DialogSurface className={dialogSurface}>
                         <DialogBody>
                           <DialogTitle style={{}}><strong>Détails</strong></DialogTitle>
-                          <p><strong>Commentaire:</strong>{this.state.fetcheditem.Comment}</p>
-                          <p><strong>Nom du Manager:</strong>{this.state.fetcheditem.IDManage1}</p>
+                          <p><strong>Commentaire:</strong>{item.Comment}</p>
+                          <p><strong>Nom du Manager:</strong>{item.IDManage1}</p>
+                          <div style={{display:'flex'}}>
+                          <DocumentArrowDown24Regular style={{marginTop:'20px'}} />
+                          <PrimaryButton style={{height:'24px',backgroundColor:'#23365E' ,borderRadius:'25px',marginTop:'20px' }}>
+                            Télecharger
+                          </PrimaryButton>
+                          </div>
                         </DialogBody>
                       </DialogSurface>
                       </div>
@@ -242,9 +390,8 @@ export default class DashboardUserLeave extends React.Component<IDashboardUserLe
                   </div>
                   </TableCellLayout>
                 </TableCell>
-
               </TableRow>
-            {/* ))} */}
+             ))} 
           </TableBody>
         </Table>
         </div>
