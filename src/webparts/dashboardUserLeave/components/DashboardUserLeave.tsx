@@ -3,6 +3,7 @@ import type { IDashboardUserLeaveProps } from './IDashboardUserLeaveProps';
 import { DatePicker, mergeStyles, PrimaryButton, values } from '@fluentui/react';
 import { buttonClassNames, Dropdown ,Input,Option, OptionOnSelectData, SelectionEvents } from '@fluentui/react-components';
 import {
+  AttachRegular,
   DocumentArrowDown24Regular,
   EditOff24Regular,
 } from "@fluentui/react-icons";
@@ -51,7 +52,7 @@ const wrapper = mergeStyles({
 const dialogSurface = mergeStyles({
   boxShadow: "0px 4px 10px rgba(0, 0, 45, 0.1)", // Customize shadow here if needed
   borderRadius: "8px", // Optional: for rounded corners
-  backgroundColor:'white'
+  backgroundColor:'white',
 });
 
 const backdrop = mergeStyles({
@@ -71,10 +72,9 @@ const backdrop = mergeStyles({
 
 
 const dropdownClass = mergeStyles({
-  gridTemplateRows: "repeat(1fr)",
   justifyItems: "start",
   gap: "2px",
-  maxWidth: "400px",
+  width:'150px'
 });
 
 
@@ -104,7 +104,8 @@ export default class DashboardUserLeave extends React.Component<IDashboardUserLe
     filteredItems:[] as any,
     startdate_upd :"",
     enddate_upd : "",
-    motif_upd:''
+    motif_upd:'',    
+    endDate: ''
   };
 
   private sp: SPFI;
@@ -134,11 +135,21 @@ export default class DashboardUserLeave extends React.Component<IDashboardUserLe
   private updateItem = async (item: any) => {
     console.log(item.ID)
     const id = item.ID;
-    await this.sp.web.lists.getByTitle("leaveList").items.getById(id).update({
-      AbsenceReason:this.state.motif_upd,
-      StartDate:new Date (this.state.startdate_upd),
-      EndDate:new Date (this.state.enddate_upd)
-    });
+    const updateFields: any = {
+      UpdateDate: new Date(),
+    };
+    
+    if (this.state.motif_upd) {
+      updateFields.AbsenceReason = this.state.motif_upd;
+    }
+    if (this.state.startdate_upd) {
+      updateFields.StartDate = new Date(this.state.startdate_upd);
+    }
+    if (this.state.enddate_upd) {
+      updateFields.EndDate = new Date(this.state.enddate_upd);
+    }
+    
+    await this.sp.web.lists.getByTitle("leaveList").items.getById(id).update(updateFields);
     console.log('set')
     this.getListItems();
   };
@@ -170,13 +181,22 @@ export default class DashboardUserLeave extends React.Component<IDashboardUserLe
   };
 
 
+  selectdate_2=(date)=>{
+    this.setState({endDate:String(date)});
+  };
+
+
+  
+
+
   private filterItems = () => {
-    const { fetcheditem, statut, startDate } = this.state;
+    const { fetcheditem, statut, startDate,endDate } = this.state;
   
     const filtered = fetcheditem.filter((item) => {
       const matchesStatut = !statut || item.Status === statut;
       const matchesDate = !startDate || new Date(item.StartDate) >= new Date(startDate);
-      return matchesStatut && matchesDate;
+      const matchesDate2 = !endDate || new Date(item.EndDate) <= new Date(endDate);
+      return matchesStatut && matchesDate && matchesDate2;
     });
   
     this.setState({ filteredItems: filtered });
@@ -193,17 +213,42 @@ export default class DashboardUserLeave extends React.Component<IDashboardUserLe
     this.setState({enddate_upd:String(date)});
   }
 
+  handleattachmentFile = async (item: any) => {
+    try {
+      const itemData = await this.sp.web.lists
+        .getByTitle("leaveList")
+        .items.getById(item.ID)
+        .select("AttachmentFiles")
+        .expand("AttachmentFiles")();
+  
+      const attachmentFiles = itemData.AttachmentFiles;
+  
+      if (attachmentFiles.length > 0) {
+        const attachmentUrl = attachmentFiles[0].ServerRelativeUrl;
+        const currentURL = this.props.context.pageContext.web.absoluteUrl;
+        const tenantUrl = currentURL.split("/sites/")[0];
+        const absoluteUrl = `${tenantUrl}${attachmentUrl}`;
+  
+        window.open(absoluteUrl, "_blank");
+      } else {
+        console.warn("No attachments found for this item.");
+      }
+    } catch (error) {
+      console.error("Error opening attachment:", error);
+    }
+  };
+
 
 
 
   public render(): React.ReactElement<IDashboardUserLeaveProps> {
 
     console.log(this.state)
-    console.log(this.state.fetcheditem.Status )
 
 
     return (
       <div>
+
         <strong>Filtres</strong>
         <div style={{display:'flex',flexDirection:'row',gap:'20px',height:'35px'}}>
           <div style={{display:'flex',flexDirection:'row',gap:'0px'}} >
@@ -234,11 +279,24 @@ export default class DashboardUserLeave extends React.Component<IDashboardUserLe
 
 
 
+          <div style={{display:'flex',flexDirection:'row',gap:'0px'}} >
+            <p style={{marginRight:'10px'}}>Date fin </p>
+            <div style={{height:'15px',marginTop:'11px'}}>
+            <DatePicker
+              className={dateClass}
+              placeholder="Select a date..."
+              onSelectDate={this.selectdate_2}
+            />
+            </div>
+          </div>
+
+
+
+
 
           <PrimaryButton onClick={this.filterItems} className={confirmButtonClass}>REFRAICHIR</PrimaryButton>
           <PrimaryButton className={confirmButtonClass}>CREER UNE DEMANDE</PrimaryButton>
         </div>
-
 
 
 
@@ -258,8 +316,14 @@ export default class DashboardUserLeave extends React.Component<IDashboardUserLe
           <TableBody>
             {this.state.filteredItems.map((item) => (
               <TableRow>
+
+
+
                 <TableCell>
                   <TableCellLayout>
+                  {item.Attachments &&
+                  <AttachRegular style={{cursor:'pointer'}} onClick={()=>this.handleattachmentFile(item)} />
+                  }
                     {item.AbsenceReason}
                   </TableCellLayout>
                 </TableCell>
@@ -295,36 +359,70 @@ export default class DashboardUserLeave extends React.Component<IDashboardUserLe
                       </DialogTrigger>
                       <div className={backdrop}>
                       <DialogSurface className={dialogSurface}>
-                        {(item.Status==="En cours" )?
-                        <DialogBody>
-                          <DialogTitle><strong>MODIFIER :</strong></DialogTitle>
-                          <div className={dropdownClass}>
-                          <label><strong>Motif d'absence</strong></label>
-                            <Dropdown  onOptionSelect={this.handleabsChange} placeholder="Choisir" >
-                              {this.state.options.map((option) => (
-                                <Option style={{backgroundColor:'white'}} key={option} value={option}>
-                                  {option}
-                                </Option>
-                              ))}
-                            </Dropdown>
-                            <div >
-                            <label><strong>Date de début</strong></label>
-                            <DatePicker
-                              className={dateClass}
-                              placeholder="Select a date..."
-                              onSelectDate={this.selectStart}
-                            />
+                        {item.Status==="En cours" ?
+                        <DialogBody style={{marginLeft:'auto',marginRight:'auto'}}>
+                          <DialogTitle><strong>MODIFIER:</strong></DialogTitle>
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', padding: '20px' }}>
+                            
+                            <label style={{ fontWeight: 'bold', marginBottom: '5px' }}>Motif d'absence</label>
+                            <div style={{ width: '100%' }}>
+                              <Dropdown  
+                                onOptionSelect={this.handleabsChange} 
+                                placeholder="Choisir"
+                              >
+                                {this.state.options.map((option) => (
+                                  <Option 
+                                    key={option} 
+                                    value={option} 
+                                    style={{ backgroundColor: 'white' }}
+                                  >
+                                    {option}
+                                  </Option>
+                                ))}
+                              </Dropdown>
                             </div>
-                          <div>
-                            <label><strong>Date fin</strong></label>
-                            <DatePicker
-                              className={dateClass}
-                              placeholder="Select a date..."
-                              onSelectDate={this.selectEnd}
-                            />
+
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                              <label style={{ fontWeight: 'bold', marginBottom: '5px' }}>Date de début</label>
+                              <div style={{ width: '100%' }}>
+                                <DatePicker
+                                  style={{ width: '100%' }}
+                                  placeholder="Select a date..."
+                                  onSelectDate={this.selectStart}
+                                />
+                              </div>
                             </div>
-                            <PrimaryButton onClick={()=>{this.updateItem(item)}} style={{height:'24px',backgroundColor:'#23365E' ,borderRadius:'25px',marginTop:'20px' }}>Confirmer</PrimaryButton>
+
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                              <label style={{ fontWeight: 'bold', marginBottom: '5px' }}>Date fin</label>
+                              <div style={{ width: '100%' }}>
+                                <DatePicker
+                                  style={{ width: '100%' }}
+                                  placeholder="Select a date..."
+                                  onSelectDate={this.selectEnd}
+                                />
+                              </div>
+                            </div>
+
+                            <PrimaryButton
+                              onClick={() => { this.updateItem(item); }}
+                              style={{
+                                height: '24px',
+                                backgroundColor: '#23365E',
+                                borderRadius: '25px',
+                                marginTop: '20px',
+                                color: 'white',
+                                fontWeight: 'bold',
+                                cursor: 'pointer',
+                                border: 'none'
+                              }}
+                            >
+                              Confirmer
+                            </PrimaryButton>
+
                           </div>
+
                         </DialogBody>
                         :
                         <DialogBody>

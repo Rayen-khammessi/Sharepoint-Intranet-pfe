@@ -17,11 +17,20 @@
           "manifest": "./src/webparts/dashboardUserLeave/DashboardUserLeaveWebPart.manifest.json"
         }
       ]
+    },
+    "dashboard-manager-requests-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/dashboardManagerRequests/DashboardManagerRequestsWebPart.js",
+          "manifest": "./src/webparts/dashboardManagerRequests/DashboardManagerRequestsWebPart.manifest.json"
+        }
+      ]
     }
   },
   "externals": {},
   "localizedResources": {
     "LeaveRequestFormWebPartStrings": "lib/webparts/leaveRequestForm/loc/{locale}.js",
-    "DashboardUserLeaveWebPartStrings": "lib/webparts/dashboardUserLeave/loc/{locale}.js"
+    "DashboardUserLeaveWebPartStrings": "lib/webparts/dashboardUserLeave/loc/{locale}.js",
+    "DashboardManagerRequestsWebPartStrings": "lib/webparts/dashboardManagerRequests/loc/{locale}.js"
   }
 }

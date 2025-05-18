@@ -88,6 +88,10 @@ export default class LeaveRequestForm extends React.Component<ILeaveRequestFormP
     remplacant:'',
     options :["choix 1" ,"choix 2" ,"choix 3"],
     SoldeConge:0,
+    fileName: '' as any,
+    file: null as File | null,
+
+    
   }
   private sp: SPFI;
 
@@ -103,7 +107,7 @@ export default class LeaveRequestForm extends React.Component<ILeaveRequestFormP
   private async getListItems(): Promise<void> {
     try {
       const items = await this.sp.web.lists.getByTitle("UsersList").items();
-      const fetchedItem = items[1];
+      const fetchedItem = items[2];
       this.setState({ items: {
         "Nom de l'employé": fetchedItem.UserLastName,
         "Adresse email de l'organisation": fetchedItem.EmailAdresse,
@@ -126,6 +130,8 @@ export default class LeaveRequestForm extends React.Component<ILeaveRequestFormP
     console.log('clicked')
     try {
       const newItem = await this.sp.web.lists.getByTitle("leaveList").items.add({
+        Name:(this.state.MyList as any ).UserFirstName,
+        LastName: (this.state.MyList as any).UserLastName,
         StartDate: new Date(this.state.startDate) ,
         EndDate: new Date (this.state.endDate),
         NB_days: this.state.nbDays,
@@ -135,8 +141,20 @@ export default class LeaveRequestForm extends React.Component<ILeaveRequestFormP
         Solde: (this.state.MyList as any).SoldConge,
         Etablissement:(this.state.MyList as any).Establishment,
         UserID: (this.state.MyList as any).UserID,
-        IDManage1: (this.state.MyList as any).Managers
+        IDManage1: (this.state.MyList as any).Managers,
+        ID_ : (this.state.MyList as any).ID,
+        Status : 'En cours',
+        UpdateDate : new Date()
+
       });
+
+
+
+        
+      if (this.state.file) {
+        await this.sp.web.lists.getByTitle("leaveList").items.getById(newItem.ID).attachmentFiles.add(this.state.file.name, this.state.file);
+      }
+  
   
       console.log("Item added:", newItem);
       alert("Request submitted successfully!");
@@ -199,6 +217,20 @@ export default class LeaveRequestForm extends React.Component<ILeaveRequestFormP
   handleChangeRemplacant = (e: React.ChangeEvent<HTMLInputElement>) => {
     this.setState({remplacant : e.target.value});
   };
+
+
+  handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const fiile = e.target.files[0];
+      this.setState({file : fiile,fileName:fiile.name});
+      console.log(this.state.fileName)
+    }
+  };
+
+
+
+
+  
 
 
   public render(): React.ReactElement<ILeaveRequestFormProps> {
@@ -276,7 +308,36 @@ export default class LeaveRequestForm extends React.Component<ILeaveRequestFormP
           {/* ELEMENT */}
           <Field style={{marginLeft:"20px"}}>
             <label><strong>Attacher un élément justificatif</strong></label>
-            <PrimaryButton style={{height:'30px',width:'190px', backgroundColor:'#23365E' ,borderRadius:'25px' }}  > Choisir un élément </PrimaryButton>
+            <div style={{ position: 'relative', display: 'inline-block',marginTop:'10px' }}>
+              <input
+                type="file"
+                onChange={this.handleFileChange}
+                style={{
+                  opacity: 0,
+                  height: '30px',
+                  position: 'absolute',
+                  top: '0',
+                  left: '0',
+                  cursor: 'pointer',
+                }}
+                />
+              <div
+                style={{
+                  backgroundColor: '#23365E',
+                  borderRadius: '25px',
+                  height: '30px',
+                  color: 'white',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  paddingLeft: '10px',
+                  paddingRight: '10px',
+                }}
+                  >
+                  {this.state.fileName ? this.state.fileName : 'Choisir un élément'}
+                </div>
+                </div>
           </Field>
           </div>
           {/* ELEMENT */}
@@ -350,7 +411,11 @@ export default class LeaveRequestForm extends React.Component<ILeaveRequestFormP
             <p style={{marginLeft:'10px'}}>Solde de congées | {this.state.SoldeConge}</p>
           </div>
           </div>
+          {(this.state.MyList as any).SoldConge >0 && (this.state.MyList as any ).SoldConge>=this.state.nbDays ?
           <PrimaryButton className={confirmButtonClass} onClick={()=>this.setListItem()}><strong>Soumettre la demande</strong></PrimaryButton>
+          : 
+          <p>Solde de conge egale a 0</p>}
+          
           {/* OTHER DETAILS */}
 
 
